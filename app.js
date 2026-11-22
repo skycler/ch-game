@@ -34,23 +34,23 @@
       title: 'Kantone', box: 'Flaggen', points: 4, items: cantonItems,
       hint: 'Flagge auf einen Kanton ziehen – oder Flagge anklicken und dann den Kanton anklicken.',
       form: {text: 'Richtiger Kanton! Jetzt die Angaben ausfüllen:', short: 'Kürzel (2 Buchstaben)', capital: 'Hauptort'},
-      wrongMsg: (it, hit) => `Falsch! Diese Flagge gehört nicht zu ${hit.name}.`
+      wrongMsg: (it, hit) => `Diese Flagge gehört nicht zu ${hit.name}.`
     },
     countries: {
       title: 'Nachbarländer', box: 'Flaggen', points: 4, items: countryItems,
       hint: 'Flagge auf ein Nachbarland ziehen – oder Flagge anklicken und dann das Land anklicken.',
       form: {text: 'Richtiges Land! Jetzt die Angaben ausfüllen:', short: 'Länderkürzel (z. B. Autokennzeichen)', capital: 'Hauptstadt'},
-      wrongMsg: (it, hit) => `Falsch! Diese Flagge gehört nicht zu ${hit.name}.`
+      wrongMsg: (it, hit) => `Diese Flagge gehört nicht zu ${hit.name}.`
     },
     lakes: {
       title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true,
       hint: 'Seename auf den See ziehen – oder Namen anklicken und dann den See anklicken. Zoomen hilft bei kleinen Seen.',
-      wrongMsg: (it, hit) => `Falsch! Das ist nicht der ${it.name} – hier ist: ${hit.name}.`
+      wrongMsg: (it, hit) => `Das ist nicht der ${it.name} – hier ist: ${hit.name}.`
     },
     rivers: {
       title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true,
       hint: 'Flussname auf den Fluss ziehen – oder Namen anklicken und dann den Fluss anklicken.',
-      wrongMsg: (it, hit) => `Falsch! Das ist nicht die/der ${it.name} – hier ist: ${hit.name}.`
+      wrongMsg: (it, hit) => `Das ist nicht die/der ${it.name} – hier ist: ${hit.name}.`
     }
   };
   const ORDER = Object.keys(GAMES);
@@ -79,6 +79,8 @@
     return s;
   }
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  const who = () => state.name || 'du';
+  const pick = arr => arr[Math.random() * arr.length | 0];
   const G = () => state.g[state.cur];
   const game = () => GAMES[state.cur];
 
@@ -262,8 +264,8 @@
   // ---------- game logic ----------
   function guess(key, targetKey) {
     const g = state.cur, it = itemOf(g, key), hit = itemOf(g, targetKey);
-    if (G().done.includes(targetKey)) { toast(`${hit.name} ist schon erledigt.`, 'err'); select(null); return; }
-    if (targetKey !== key) { fail(GAMES[g].wrongMsg(it, hit), key); return; }
+    if (G().done.includes(targetKey)) { toast(`${who()}, ${hit.name} hast du schon gelöst – such dir den nächsten!`, 'err'); select(null); return; }
+    if (targetKey !== key) { fail(pick([`Nicht ganz, ${who()}!`, `Fast, ${who()}!`, `Gute Idee, ${who()}, aber nicht ganz.`]) + ' ' + GAMES[g].wrongMsg(it, hit) + pick([' Probier es nochmal!', ' Du schaffst das!', ' Bleib dran!']), key); return; }
     if (!it.answers) { succeed(key); return; }
     pending = key;
     const f = GAMES[g].form;
@@ -285,15 +287,17 @@
     if (okShort && okCap) succeed(key, a.capital[0]);
     else {
       const bad = [!okShort && 'Kürzel', !okCap && f.capital].filter(Boolean).join(' und ');
-      fail(`${bad} bei ${itemOf(state.cur, key).name} falsch. Die Flagge geht zurück in die Box.`, key);
+      fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + ` ${bad} bei ${itemOf(state.cur, key).name} stimmt noch nicht. Die Flagge ist wieder in der Box – beim nächsten Mal klappt's!`, key);
     }
   });
   function succeed(key, capital) {
     const g = state.cur, it = itemOf(g, key), pts = GAMES[g].points;
     G().done.push(key); G().score += pts; save();
     markDone(g, key); tileEl(key)?.remove(); select(null); updateStats();
-    log(`✔ ${it.name}${capital ? ' – ' + capital : ''}. +${pts}`, 'ok');
-    toast(`Richtig! ${it.name} geschafft. +${pts} Punkte`, 'ok');
+    const left = GAMES[g].items.length - G().done.length;
+    const extra = left === 0 ? '' : left === 1 ? ' Nur noch eins!' : G().done.length === Math.ceil(GAMES[g].items.length / 2) ? ' Halbzeit – super Tempo!' : '';
+    toast(pick([`Super, ${who()}!`, `Bravo, ${who()}!`, `Genau richtig, ${who()}!`, `Stark, ${who()}!`, `Top, ${who()}!`, `Das sitzt, ${who()}!`]) +
+      ` ${it.name}${capital ? ' (' + capital + ')' : ''} geschafft. +${pts} Punkte.` + extra, 'ok');
     if (G().done.length === GAMES[g].items.length) win();
   }
   const cancel = () => { if (pending == null) return; const k = pending; pending = null; $('#modal').hidden = true; select(null); bounce(k); };
@@ -304,17 +308,16 @@
   function fail(msg, key) {
     G().errors++; G().score = Math.max(0, G().score - 1); save();
     updateStats(); select(null); bounce(key);
-    log('✘ ' + msg + ' −1', 'err'); toast(msg, 'err');
+    toast(msg, 'err');
   }
-  function log(msg, cls) { const li = document.createElement('li'); li.className = cls; li.textContent = `[${game().title}] ${msg}`; $('#log').prepend(li); }
   let tt; function toast(msg, cls) {
     const t = $('#toast'); t.textContent = msg; t.className = 'show ' + cls;
     clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2800);
   }
   function win() {
-    $('#wintitle').textContent = `🎉 ${game().title}: alles geschafft!`;
+    $('#wintitle').textContent = `🎉 Bravo, ${who()}!`;
     const next = ORDER[(ORDER.indexOf(state.cur) + 1) % ORDER.length];
-    $('#winmsg').textContent = `Punkte: ${G().score} · Fehler: ${G().errors} – probier als Nächstes «${GAMES[next].title}».`;
+    $('#winmsg').textContent = `Du hast «${game().title}» komplett gelöst! Punkte: ${G().score} · Fehler: ${G().errors}. Weiter geht's mit «${GAMES[next].title}» – du bist auf einem super Weg!`;
     $('#win').hidden = false;
   }
   $('#win').addEventListener('click', e => { if (e.target.id === 'win') $('#win').hidden = true; });
@@ -323,7 +326,7 @@
     selected = null; $('#win').hidden = true;
     renderBox(); drawMap();
   }
-  $('#reset').addEventListener('click', () => { if (confirm(`«${game().title}» neu beginnen und Punkte zurücksetzen?`)) reset(); });
+  $('#reset').addEventListener('click', () => { if (confirm(`${who()}, «${game().title}» wirklich neu beginnen und Punkte zurücksetzen?`)) reset(); });
   $('#again').addEventListener('click', reset);
 
   // controls
@@ -331,9 +334,25 @@
   $('#zout').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.6);
   $('#zreset').onclick = () => svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
   $('#labels').onchange = e => svg.classed('nolabels', !e.target.checked);
-  $('#logtoggle').onchange = e => { $('#log').hidden = !e.target.checked; };
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawMap, 150); });
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawMap, 150); });
 
-  renderBox(); drawMap();
-  if (G().done.length === game().items.length) win();
+  // ---------- player name ----------
+  function renderWho() { $('#who').textContent = '👤 ' + (state.name || ''); }
+  function askName() {
+    $('#nameinput').value = state.name || '';
+    $('#welcome').hidden = false;
+    setTimeout(() => { $('#nameinput').focus(); $('#nameinput').select(); }, 30);
+  }
+  $('#nameform').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const first = !state.name;
+    state.name = $('#nameinput').value.trim().slice(0, 24) || 'du'; save();
+    $('#welcome').hidden = true; renderWho();
+    toast(first ? `Hallo ${state.name}! Los geht's – du schaffst das! 🇨🇭` : `Alles klar, ${state.name}!`, 'ok');
+  });
+  $('#who').addEventListener('click', askName);
+
+  renderBox(); drawMap(); renderWho();
+  if (!state.name) askName();
+  else if (G().done.length === game().items.length) win();
 })();

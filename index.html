@@ -14,6 +14,7 @@
     <div class="stat"><span id="score">0</span><label>Punkte</label></div>
     <div class="stat"><span><span id="done">0</span>/<span id="total">26</span></span><label>Gelöst</label></div>
     <div class="stat"><span id="errors">0</span><label>Fehler</label></div>
+    <button id="who" title="Namen ändern"></button>
     <button id="reset" title="Dieses Spiel neu beginnen">Zurücksetzen</button>
   </div>
 </header>
@@ -33,8 +34,6 @@
   <aside>
     <h2><span id="boxtitle">Flaggen</span> <small id="left"></small></h2>
     <div id="box"></div>
-    <label class="logtoggle"><input type="checkbox" id="logtoggle"> Protokoll anzeigen</label>
-    <ul id="log" hidden></ul>
   </aside>
 </main>
 
@@ -55,6 +54,15 @@
       <button type="button" id="cancel" class="secondary">Abbrechen</button>
       <button type="submit">Prüfen</button>
     </div>
+  </form>
+</div>
+
+<div id="welcome" hidden>
+  <form class="card" id="nameform" autocomplete="off">
+    <h2>👋 Willkommen!</h2>
+    <p>Wie heisst du?</p>
+    <input id="nameinput" maxlength="24" required placeholder="Dein Name" spellcheck="false">
+    <div class="row"><button type="submit">Los geht's!</button></div>
   </form>
 </div>
 
