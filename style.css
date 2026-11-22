@@ -97,3 +97,13 @@ svg.g-countries .lbl.country,svg.g-lakes .lbl.lake,svg.g-rivers .lbl.river{displ
 #welcome input{display:block;width:100%;font:inherit;font-size:18px;padding:8px;margin:6px 0;border:2px solid #ccd;border-radius:6px;text-align:center}
 #welcome input:focus{outline:0;border-color:#d52b1e}
 #who{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* mountains */
+.peaks{display:none}
+svg.g-mountains .peaks{display:inline}
+.peak{fill:#7b4b2a;stroke:#fff;stroke-width:calc(1px / var(--k,1));paint-order:stroke;font-size:calc(14px / var(--k,1));text-anchor:middle;pointer-events:none}
+.peak.hover{fill:#ff9800;font-size:calc(20px / var(--k,1))}
+.peak.done{fill:var(--d)}
+.peakhit{fill:transparent;r:calc(12px / var(--k,1));pointer-events:all}
+.lbl.code.m{display:none}
+svg.g-mountains .lbl.code.m{display:inline}

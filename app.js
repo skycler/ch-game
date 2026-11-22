@@ -29,6 +29,8 @@
     ['Rhein'], ['Rhône', 'Rhone'], ['Aare'], ['Reuss'], ['Limmat'], ['Inn'], ['Ticino'], ['Doubs'], ['Thur'], ['Saane'], ['Emme'], ['Maggia'], ['Hinterrhein'], ['Vorderrhein']
   ].map(([data, shown]) => ({key: data, name: shown || data}));
 
+  const mountainItems = MOUNTAINS.map(m => ({key: m.name, name: m.name, lon: m.lon, lat: m.lat, ele: m.ele}));
+
   const GAMES = {
     cantons: {
       title: 'Kantone', box: 'Flaggen', points: 4, items: cantonItems,
@@ -46,6 +48,11 @@
       title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true,
       hint: 'Seename auf den See ziehen – oder Namen anklicken und dann den See anklicken. Zoomen hilft bei kleinen Seen.',
       wrongMsg: it => `Das ist nicht der ${it.name}.`
+    },
+    mountains: {
+      title: 'Berge', box: 'Berge', points: 2, items: mountainItems, text: true,
+      hint: 'Bergname auf das Dreieck ▲ ziehen – oder Namen anklicken und dann den Berg anklicken.',
+      wrongMsg: it => `Das ist nicht der richtige Berg für «${it.name}».`
     },
     rivers: {
       title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true,
@@ -113,6 +120,7 @@
   }
   // position (lon/lat) where the name of an item is placed on the map
   function labelPos(g, key) {
+    if (g === 'mountains') { const m = itemOf(g, key); return [m.lon, m.lat]; }
     if (g === 'cantons') return d3.geoCentroid(largestPolygon(cantons.find(f => f.id === itemOf(g, key).id)));
     if (g === 'countries') return COUNTRY_LABELS[key];
     if (g === 'lakes') return d3.geoCentroid(lakes.find(f => f.id === itemOf(g, key).id));
@@ -154,6 +162,13 @@
     countryItems.forEach(c => put(c.name, COUNTRY_LABELS[c.key], 'country'));
     lakeItems.forEach(l => put(l.name, labelPos('lakes', l.key), 'lake'));
     riverItems.forEach(r => put(r.name, labelPos('rivers', r.key), 'river'));
+    // mountain markers (only visible in the mountain game)
+    const pk = gRoot.append('g').attr('class', 'peaks');
+    const pkp = mountainItems.map(m => ({key: m.key, p: proj([m.lon, m.lat])}));
+    pk.selectAll('text').data(pkp).join('text').attr('class', 'peak').attr('x', d => d.p[0]).attr('y', d => d.p[1] + 1)
+      .attr('data-k', d => 'mountains:' + d.key).text('▲');
+    pk.selectAll('circle').data(pkp).join('circle').attr('class', 'peakhit').attr('cx', d => d.p[0]).attr('cy', d => d.p[1] - 3)
+      .attr('data-t', d => 'mountains:' + d.key);
     gRoot.append('g').attr('id', 'codes');
     ORDER.forEach(g => state.g[g].done.forEach(k => markDone(g, k)));
 
@@ -172,7 +187,7 @@
       .classed('done', true).style('--c', colour(g, key)).style('--d', dark(g, key));
     const it = itemOf(g, key);
     const q = proj(labelPos(g, key));
-    gRoot.select('#codes').append('text').attr('class', 'lbl code').attr('x', q[0]).attr('y', q[1] + 4)
+    gRoot.select('#codes').append('text').attr('class', 'lbl code' + (g === 'mountains' ? ' m' : '')).attr('x', q[0]).attr('y', q[1] + (g === 'mountains' ? -9 : 4))
       .text(g === 'cantons' ? key : it.name);
   }
 
@@ -296,7 +311,7 @@
     const left = GAMES[g].items.length - G().done.length;
     const extra = left === 0 ? '' : left === 1 ? ' Nur noch eins!' : G().done.length === Math.ceil(GAMES[g].items.length / 2) ? ' Halbzeit – super Tempo!' : '';
     toast(pick([`Super, ${who()}!`, `Bravo, ${who()}!`, `Genau richtig, ${who()}!`, `Stark, ${who()}!`, `Top, ${who()}!`, `Das sitzt, ${who()}!`]) +
-      ` ${it.name}${capital ? ' (' + capital + ')' : ''} geschafft. +${pts} Punkte.` + extra, 'ok');
+      ` ${it.name}${capital ? ' (' + capital + ')' : it.ele ? ' (' + it.ele + ' m)' : ''} geschafft. +${pts} Punkte.` + extra, 'ok');
     if (G().done.length === GAMES[g].items.length) win();
   }
   const cancel = () => { if (pending == null) return; const k = pending; pending = null; $('#modal').hidden = true; select(null); bounce(k); };
