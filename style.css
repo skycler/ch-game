@@ -1,0 +1,100 @@
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;color:#1d2733;background:#eef2f6;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#d52b1e;color:#fff;gap:12px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}
+.stats{display:flex;gap:18px;align-items:center}
+.stat{text-align:center;font-size:22px;font-weight:700;line-height:1}
+.stat label{display:block;font-size:11px;font-weight:400;opacity:.85;text-transform:uppercase;margin-top:2px}
+button{font:inherit;padding:7px 14px;border:0;border-radius:6px;background:#d52b1e;color:#fff;cursor:pointer}
+header button{background:#fff3;border:1px solid #fff8}
+button.secondary{background:#e3e8ee;color:#333}
+button:hover{filter:brightness(1.08)}
+
+main{flex:1;display:flex;min-height:0}
+#mapwrap{flex:1;position:relative;min-width:0;background:#cfe6f5}
+#map{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#map:active{cursor:grabbing}
+.mapctl{position:absolute;top:10px;left:10px;display:flex;gap:6px;align-items:center;background:#fffc;padding:5px 8px;border-radius:8px}
+.mapctl button{padding:2px 10px;font-size:18px;background:#fff;color:#333;border:1px solid #bbb}
+.mapctl label{font-size:13px;margin-left:6px;user-select:none}
+#hint{position:absolute;bottom:8px;left:10px;font-size:12px;color:#456;background:#fffc;padding:3px 8px;border-radius:6px;pointer-events:none}
+
+aside{width:340px;max-width:40vw;background:#fff;border-left:1px solid #ccd;display:flex;flex-direction:column;padding:10px;min-height:0}
+aside h2{font-size:14px;margin:4px 0 6px;text-transform:uppercase;color:#567}
+aside h2 small{font-weight:400;text-transform:none}
+#box{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;overflow:auto;padding:4px;max-height:55%;align-content:start}
+.flag{aspect-ratio:1;border:2px solid #dde;border-radius:8px;background:#f7f9fb;display:flex;align-items:center;justify-content:center;padding:4px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.flag img{max-width:100%;max-height:100%;pointer-events:none;-webkit-user-drag:none}
+.flag:hover{border-color:#89a}
+.flag.selected{border-color:#d52b1e;box-shadow:0 0 0 3px #d52b1e55}
+.flag.dragging{opacity:.3}
+.flag.bounce{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#ghost{position:fixed;width:72px;height:72px;pointer-events:none;z-index:50;transform:translate(-50%,-50%);filter:drop-shadow(0 4px 6px #0006)}
+#ghost img{width:100%;height:100%;object-fit:contain}
+
+#log{list-style:none;margin:0;padding:0;overflow:auto;flex:1;font-size:13px}
+aside .logtoggle{font-size:13px;color:#567;margin:6px 0 4px;user-select:none}
+#log li{padding:4px 8px;border-left:4px solid;margin-bottom:4px;background:#f6f8fa;border-radius:0 4px 4px 0}
+#log li.ok{border-color:#2e9e4f}
+#log li.err{border-color:#d52b1e}
+
+/* map layers */
+.neighbour{fill:#e8e6df;stroke:#b8b4a8;stroke-width:.8;vector-effect:non-scaling-stroke}
+.canton{fill:#fbf8ef;stroke:#7a7466;stroke-width:1;vector-effect:non-scaling-stroke;transition:fill .12s}
+.lake{fill:#8cc4ea;stroke:#5a9fd0;stroke-width:.6;vector-effect:non-scaling-stroke;pointer-events:none}
+svg.g-lakes .lake.tgt{pointer-events:visiblePainted}
+.river{fill:none;stroke:#4a9fd8;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none}
+.river.major{stroke-width:2.2}
+.lbl{pointer-events:none;font-size:calc(11px / var(--k,1));paint-order:stroke;stroke:#fffb;stroke-width:calc(3px / var(--k,1));text-anchor:middle}
+.lbl.country{fill:#8a8574;font-size:calc(14px / var(--k,1));letter-spacing:calc(2px / var(--k,1));text-transform:uppercase;font-weight:600}
+.lbl.code{fill:#222;font-weight:700;font-size:calc(13px / var(--k,1));stroke:#fff8}
+
+/* modal */
+#modal,#win{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;z-index:100}
+[hidden]{display:none!important}
+#form,.card{background:#fff;border-radius:12px;padding:22px 26px;width:min(92vw,360px);box-shadow:0 10px 40px #0006;text-align:center}
+#mflag{height:80px;max-width:120px;object-fit:contain}
+#form h3{margin:6px 0;font-size:24px}
+#form p{margin:0 0 12px;color:#567}
+#form label{display:block;text-align:left;font-size:13px;color:#567;margin-bottom:10px}
+#form input{display:block;width:100%;font:inherit;font-size:18px;padding:8px;margin-top:3px;border:2px solid #ccd;border-radius:6px}
+#short{text-transform:uppercase}
+#form input:focus{outline:0;border-color:#d52b1e}
+.row{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+#toast{position:fixed;top:70px;left:50%;transform:translate(-50%,-20px);padding:10px 18px;border-radius:8px;color:#fff;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.ok{background:#2e9e4f}
+#toast.err{background:#c62828}
+
+@media (max-width:760px){
+  main{flex-direction:column}
+  aside{width:auto;max-width:none;height:42%;border-left:0;border-top:1px solid #ccd}
+  #box{max-height:none}
+  #hint{display:none}
+}
+
+/* tabs */
+#tabs{display:flex;gap:6px;flex-wrap:wrap}
+#tabs button{background:#fff2;border:1px solid #fff6;padding:5px 12px}
+#tabs button.active{background:#fff;color:#d52b1e;font-weight:700}
+#tabs button small{opacity:.8;margin-left:4px}
+
+/* hover / done states for targets */
+.canton.hover,.neighbour.hover,.lake.hover{fill:#ffd95e;stroke:#d52b1e;stroke-width:2.5}
+.river.hover{stroke:#ff9800;stroke-width:4.5}
+.canton.done,.neighbour.done,.lake.done{fill:var(--c)}
+.river.done{stroke:var(--d);stroke-width:3}
+.canton.done{cursor:default}
+.hit{fill:none;stroke:transparent;stroke-width:16px;vector-effect:non-scaling-stroke;pointer-events:none}
+svg.g-rivers .hit{pointer-events:stroke}
+.lbl.lake,.lbl.river{fill:#1f6fa8;font-style:italic;font-size:calc(10px / var(--k,1))}
+svg.nolabels .lbl.country,svg.nolabels .lbl.lake,svg.nolabels .lbl.river{display:none}
+svg.g-countries .lbl.country,svg.g-lakes .lbl.lake,svg.g-rivers .lbl.river{display:none}
+
+/* text tiles (lakes, rivers) */
+#box.text{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+#box.text .flag{aspect-ratio:auto;padding:10px 6px;font-weight:600;text-align:center;font-size:14px}
+#ghost.text{width:auto;height:auto;padding:8px 14px;background:#fff;border:2px solid #d52b1e;border-radius:8px;font-weight:700}

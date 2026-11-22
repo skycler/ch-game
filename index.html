@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schweizer Kantone – Flaggenquiz</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🇨🇭 Schweiz-Quiz</h1>
+  <nav id="tabs"></nav>
+  <div class="stats">
+    <div class="stat"><span id="score">0</span><label>Punkte</label></div>
+    <div class="stat"><span><span id="done">0</span>/<span id="total">26</span></span><label>Gelöst</label></div>
+    <div class="stat"><span id="errors">0</span><label>Fehler</label></div>
+    <button id="reset" title="Dieses Spiel neu beginnen">Zurücksetzen</button>
+  </div>
+</header>
+
+<main>
+  <section id="mapwrap">
+    <svg id="map" aria-label="Karte der Schweiz"></svg>
+    <div class="mapctl">
+      <button id="zin" title="Vergrössern">+</button>
+      <button id="zout" title="Verkleinern">−</button>
+      <button id="zreset" title="Ansicht zurücksetzen">⟲</button>
+      <label><input type="checkbox" id="labels"> Beschriftung</label>
+    </div>
+    <div id="hint"></div>
+  </section>
+
+  <aside>
+    <h2><span id="boxtitle">Flaggen</span> <small id="left"></small></h2>
+    <div id="box"></div>
+    <label class="logtoggle"><input type="checkbox" id="logtoggle"> Protokoll anzeigen</label>
+    <ul id="log" hidden></ul>
+  </aside>
+</main>
+
+<div id="toast" role="status"></div>
+
+<div id="modal" hidden>
+  <form id="form" autocomplete="off">
+    <img id="mflag" alt="">
+    <h3 id="mname"></h3>
+    <p id="mtext"></p>
+    <label><span id="l1"></span>
+      <input id="short" maxlength="2" required spellcheck="false" autocapitalize="characters">
+    </label>
+    <label><span id="l2">Hauptort</span>
+      <input id="capital" required spellcheck="false">
+    </label>
+    <div class="row">
+      <button type="button" id="cancel" class="secondary">Abbrechen</button>
+      <button type="submit">Prüfen</button>
+    </div>
+  </form>
+</div>
+
+<div id="win" hidden>
+  <div class="card"><h2 id="wintitle">🎉 Geschafft!</h2><p id="winmsg"></p><button id="again">Nochmals spielen</button></div>
+</div>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script src="data/geo.js"></script>
+<script src="data/cantons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
