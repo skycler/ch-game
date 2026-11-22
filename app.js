@@ -2,76 +2,28 @@
   const $ = s => document.querySelector(s);
   const svg = d3.select('#map');
 
-  // =====================================================================
-  //  GAME DEFINITIONS – to add a new challenge, add an entry here.
-  //  items:  [{key, name, flag?, answers?}]   (answers => a form is shown after a correct drop)
-  //  The map side must tag the matching element with data-t="<game>:<key>" (see drawMap).
-  // =====================================================================
-  // accepted alternative spellings for the "write" mode (accents/case/spaces are ignored anyway)
-  const ALT = {
-    'Genfersee': ['Lac Léman', 'Léman', 'Lake Geneva'], 'Bodensee': ['Lake Constance'], 'Lago Maggiore': ['Langensee', 'Lac Majeur'],
-    'Neuenburgersee': ['Lac de Neuchâtel'], 'Luganersee': ['Lago di Lugano', 'Lago Ceresio'],
-    'Vierwaldstättersee': ['Vierwaldstaettersee', 'Lac des Quatre-Cantons'], 'Bielersee': ['Lac de Bienne'], 'Murtensee': ['Lac de Morat'],
-    'Rhein': ['Rhin', 'Reno'], 'Rhône': ['Rhone'], 'Saane': ['Sarine', 'La Sarine'], 'Ticino': ['Tessin'], 'Inn': ['En'],
-    'Matterhorn': ['Cervin', 'Cervino'], 'Dufourspitze': ['Monte Rosa', 'Punta Dufour'], 'Piz Bernina': ['Bernina'],
-    'Brienzer Rothorn': ['Rothorn', 'Brienzer Rothorn'], 'Monte Tamaro': ['Tamaro']
+  // ---------- games (definitions and content live in data/quiz.js, texts in data/texts.js) ----------
+  const T = TEXTS;
+  const fmt = (s, v = {}) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+  const pick = arr => arr[Math.random() * arr.length | 0];
+
+  // build the item list of every game; items need {key, name}; flag games also {flag, answers}
+  const ITEMS = {
+    cantons: () => Object.entries(CANTONS).map(([id, c]) => ({
+      key: c.code, name: c.name, id: +id, flag: `flags/${c.code}.svg`,
+      answers: {short: [c.code], capital: [c.capital, ...c.alt]}
+    })),
+    countries: () => QUIZ.countries.map(c => ({
+      key: c.key, geo: c.geo, name: c.name, label: c.label, flag: `flags/countries/${c.key}.svg`,
+      answers: {short: c.short, capital: c.capital}
+    })),
+    lakes: () => QUIZ.lakes.map(l => ({key: l.name, name: l.name, id: l.id, alt: l.alt || []})),
+    mountains: () => MOUNTAINS.map(m => ({key: m.name, name: m.name, lon: m.lon, lat: m.lat, ele: m.ele, alt: m.alt || []})),
+    rivers: () => QUIZ.rivers.map(r => ({key: r.key, name: r.name || r.key, anchor: r.anchor, major: !!r.major, alt: r.alt || []}))
   };
-  const withAlt = it => ({...it, alt: ALT[it.key] || []});
-
-  const cantonItems = Object.entries(CANTONS).map(([id, c]) => ({
-    key: c.code, name: c.name, id: +id, flag: `flags/${c.code}.svg`,
-    answers: {short: [c.code], capital: [c.capital, ...c.alt]}
-  }));
-  const countryItems = [
-    {key: 'DE', geo: 'Germany', name: 'Deutschland', capital: ['Berlin'], short: ['D', 'DE']},
-    {key: 'FR', geo: 'France', name: 'Frankreich', capital: ['Paris'], short: ['F', 'FR']},
-    {key: 'IT', geo: 'Italy', name: 'Italien', capital: ['Rom', 'Roma'], short: ['I', 'IT']},
-    {key: 'AT', geo: 'Austria', name: 'Österreich', capital: ['Wien', 'Vienna'], short: ['A', 'AT']},
-    {key: 'LI', geo: 'Liechtenstein', name: 'Liechtenstein', capital: ['Vaduz'], short: ['FL', 'LI']}
-  ].map(c => ({key: c.key, geo: c.geo, name: c.name, flag: `flags/countries/${c.key}.svg`, answers: {short: c.short, capital: c.capital}}));
-  // lake ids = swisstopo/BFS lake numbers
-  const lakeItems0 = [
-    ['Genfersee', 9757], ['Bodensee', 9326], ['Lago Maggiore', 9711], ['Neuenburgersee', 9151], ['Luganersee', 9710],
-    ['Vierwaldstättersee', 9179], ['Zürichsee', 9050], ['Thunersee', 9073], ['Brienzersee', 9089], ['Bielersee', 9148],
-    ['Zugersee', 9175], ['Walensee', 9267], ['Murtensee', 9294], ['Sempachersee', 9163], ['Hallwilersee', 9172]
-  ].map(([name, id]) => ({key: name, name, id}));
-  const lakeItems = lakeItems0.map(withAlt);
-  // river keys = names used in data/geo.js
-  const riverItems = [
-    ['Rhein'], ['Rhône', 'Rhone'], ['Aare'], ['Reuss'], ['Limmat'], ['Inn'], ['Ticino'], ['Doubs'], ['Thur'], ['Saane'], ['Emme'], ['Maggia'], ['Hinterrhein'], ['Vorderrhein']
-  ].map(([data, shown]) => withAlt({key: data, name: shown || data}));
-
-  const mountainItems = MOUNTAINS.map(m => withAlt({key: m.name, name: m.name, lon: m.lon, lat: m.lat, ele: m.ele}));
-
-  const GAMES = {
-    cantons: {
-      title: 'Kantone', box: 'Flaggen', points: 4, items: cantonItems,
-      hint: 'Flagge auf einen Kanton ziehen – oder Flagge anklicken und dann den Kanton anklicken.',
-      form: {text: 'Richtiger Kanton! Jetzt die Angaben ausfüllen:', short: 'Kürzel (2 Buchstaben)', capital: 'Hauptort'},
-      wrongMsg: () => 'Das ist nicht der richtige Kanton für diese Flagge.'
-    },
-    countries: {
-      title: 'Nachbarländer', box: 'Flaggen', points: 4, items: countryItems,
-      hint: 'Flagge auf ein Nachbarland ziehen – oder Flagge anklicken und dann das Land anklicken.',
-      form: {text: 'Richtiges Land! Jetzt die Angaben ausfüllen:', short: 'Länderkürzel (z. B. Autokennzeichen)', capital: 'Hauptstadt'},
-      wrongMsg: () => 'Das ist nicht das richtige Land für diese Flagge.'
-    },
-    lakes: {
-      title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true, write: {noun: 'See', click: 'einen See'},
-      hint: 'Seename auf den See ziehen – oder Namen anklicken und dann den See anklicken. Zoomen hilft bei kleinen Seen.',
-      wrongMsg: it => `Das ist nicht der ${it.name}.`
-    },
-    mountains: {
-      title: 'Berge', box: 'Berge', points: 2, items: mountainItems, text: true, write: {noun: 'Berg', click: 'ein Dreieck ▲'},
-      hint: 'Bergname auf das Dreieck ▲ ziehen – oder Namen anklicken und dann den Berg anklicken.',
-      wrongMsg: it => `Das ist nicht der richtige Berg für «${it.name}».`
-    },
-    rivers: {
-      title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true, write: {noun: 'Fluss', click: 'einen Fluss'},
-      hint: 'Flussname auf den Fluss ziehen – oder Namen anklicken und dann den Fluss anklicken.',
-      wrongMsg: it => `Das ist nicht der Fluss «${it.name}».`
-    }
-  };
+  const GAMES = Object.fromEntries(QUIZ.order.map(g => [g, {...QUIZ.games[g], items: ITEMS[g]()}]));
+  const countryItems = GAMES.countries.items, lakeItems = GAMES.lakes.items,
+        mountainItems = GAMES.mountains.items, riverItems = GAMES.rivers.items;
   const ORDER = Object.keys(GAMES);
   const itemOf = (g, key) => GAMES[g].items.find(i => i.key === key);
 
@@ -99,8 +51,7 @@
     return s;
   }
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
-  const who = () => state.name || 'du';
-  const pick = arr => arr[Math.random() * arr.length | 0];
+  const who = () => state.name || T.anonymous;
   const G = () => state.g[state.cur];
   const isWrite = () => !!GAMES[state.cur].write && state.mode[state.cur] === 'write';
   const game = () => GAMES[state.cur];
@@ -113,13 +64,8 @@
   const cantons = topojson.feature(GEO.topo, GEO.topo.objects.cantons).features;
   const lakes = topojson.feature(GEO.topo, GEO.topo.objects.lakes).features;
   const countries = GEO.countries.map(c => ({type: 'Feature', properties: {name: c.name}, geometry: c.geometry}));
-  const rivers = GEO.rivers.filter(r => !['Lütschine', 'Töss', 'Glatt', 'Simme', 'Sihl', 'Kander'].includes(r.name));
-  const MAJOR = new Set(['Rhein', 'Rhône', 'Aare', 'Reuss', 'Inn', 'Ticino', 'Doubs']);
-
-  const COUNTRY_LABELS = {DE: [8.9, 48.2], FR: [5.6, 47.3], IT: [8.3, 45.55], AT: [10.85, 47.3], LI: [9.55, 47.17]};
-  const RIVER_ANCHOR = {Rhein: [8.0, 47.58], 'Rhône': [7.2, 46.2], Aare: [7.95, 47.42], Reuss: [8.3, 47.2], Inn: [10.1, 46.75],
-    Ticino: [8.85, 46.4], Doubs: [6.95, 47.3], Limmat: [8.45, 47.4], Thur: [9.1, 47.5], Saane: [7.15, 46.7],
-    Emme: [7.75, 47.0], Maggia: [8.65, 46.3], Hinterrhein: [9.35, 46.62], Vorderrhein: [8.95, 46.73]};
+  const rivers = GEO.rivers.filter(r => !QUIZ.hiddenRivers.includes(r.name));
+  const MAJOR = new Set(riverItems.filter(r => r.major).map(r => r.key));
 
   function nearestPoint(name, lon, lat) {
     const r = GEO.rivers.find(x => x.name === name); if (!r) return [lon, lat];
@@ -137,9 +83,9 @@
   function labelPos(g, key) {
     if (g === 'mountains') { const m = itemOf(g, key); return [m.lon, m.lat]; }
     if (g === 'cantons') return d3.geoCentroid(largestPolygon(cantons.find(f => f.id === itemOf(g, key).id)));
-    if (g === 'countries') return COUNTRY_LABELS[key];
+    if (g === 'countries') return itemOf(g, key).label;
     if (g === 'lakes') return d3.geoCentroid(lakes.find(f => f.id === itemOf(g, key).id));
-    if (g === 'rivers') return nearestPoint(key, ...RIVER_ANCHOR[key]);
+    if (g === 'rivers') return nearestPoint(key, ...itemOf(g, key).anchor);
   }
 
   // ---------- map ----------
@@ -174,7 +120,7 @@
     // static labels (switchable) – and labels of solved items (always visible)
     const lg = gRoot.append('g');
     const put = (txt, p, cls, parent = lg) => { const q = proj(p); parent.append('text').attr('class', 'lbl ' + cls).attr('x', q[0]).attr('y', q[1] + (cls === 'code' ? 4 : 0)).text(txt); };
-    countryItems.forEach(c => put(c.name, COUNTRY_LABELS[c.key], 'country'));
+    countryItems.forEach(c => put(c.name, c.label, 'country'));
     lakeItems.forEach(l => put(l.name, labelPos('lakes', l.key), 'lake'));
     riverItems.forEach(r => put(r.name, labelPos('rivers', r.key), 'river'));
     // mountain markers (only visible in the mountain game)
@@ -230,12 +176,12 @@
   svg.on('pointerleave', () => { if (!drag && pending == null) hover(null); });
 
   // ---------- box ----------
-  const tileHTML = it => game().text ? it.name : `<img src="${it.flag}" alt="Flagge" draggable="false">`;
+  const tileHTML = it => game().text ? it.name : `<img src="${it.flag}" alt="${T.flagAlt}" draggable="false">`;
   function renderBox() {
     const box = $('#box'); box.innerHTML = ''; box.classList.toggle('text', !!game().text);
     const writing = isWrite();
     box.classList.toggle('writing', writing);
-    if (writing) box.innerHTML = `<p class="writehint">Klicke auf ${game().write.click} auf der Karte und schreibe den Namen.<br>Zoomen hilft bei kleinen Objekten.</p>`;
+    if (writing) box.innerHTML = `<p class="writehint">${fmt(T.writeHintBox, {click: game().write.click})}</p>`;
     for (const key of writing ? [] : G().order) {
       if (G().done.includes(key)) continue;
       const d = document.createElement('div');
@@ -243,7 +189,7 @@
       box.appendChild(d);
     }
     $('#boxtitle').textContent = game().box;
-    $('#hint').textContent = writing ? `Klicke auf ${game().write.click} und schreibe den Namen.` : game().hint;
+    $('#hint').textContent = writing ? fmt(T.writeHintMap, {click: game().write.click}) : game().hint;
     const modes = $('#modes'); modes.hidden = !game().write;
     modes.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.dataset.m === 'write') === writing));
     updateStats();
@@ -252,7 +198,7 @@
   function updateStats() {
     const g = G(), n = game().items.length;
     $('#score').textContent = g.score; $('#done').textContent = g.done.length; $('#total').textContent = n; $('#errors').textContent = g.errors;
-    $('#left').textContent = `(noch ${n - g.done.length})`;
+    $('#left').textContent = fmt(T.left, {n: n - g.done.length});
     renderTabs();
   }
   function renderTabs() {
@@ -308,8 +254,8 @@
   // ---------- game logic ----------
   function guess(key, targetKey) {
     const g = state.cur, it = itemOf(g, key), hit = itemOf(g, targetKey);
-    if (G().done.includes(targetKey)) { toast(`${who()}, ${hit.name} hast du schon gelöst – such dir den nächsten!`, 'err'); select(null); return; }
-    if (targetKey !== key) { fail(pick([`Nicht ganz, ${who()}!`, `Fast, ${who()}!`, `Gute Idee, ${who()}, aber nicht ganz.`]) + ' ' + GAMES[g].wrongMsg(it) + pick([' Probier es nochmal!', ' Du schaffst das!', ' Bleib dran!']), key); return; }
+    if (G().done.includes(targetKey)) { toast(fmt(T.alreadyDone, {who: who(), name: hit.name}), 'err'); select(null); return; }
+    if (targetKey !== key) { fail(fmt(pick(T.wrongPrefix), {who: who()}) + ' ' + fmt(GAMES[g].wrong, {name: it.name}) + pick(T.wrongSuffix), key); return; }
     if (!it.answers) { succeed(key); return; }
     pending = key; pendingWrite = false;
     modalLayout(false);
@@ -327,11 +273,11 @@
   }
   function askToName(k) {
     const g = state.cur, it = itemOf(g, k);
-    if (G().done.includes(k)) { toast(`${who()}, ${it.name} hast du schon gelöst – such dir einen anderen!`, 'err'); return; }
+    if (G().done.includes(k)) { toast(fmt(T.alreadyDoneWrite, {who: who(), name: it.name}), 'err'); return; }
     pending = k; pendingWrite = true; hover(k);
     modalLayout(true);
-    $('#mtext').textContent = `Wie heisst dieser ${GAMES[g].write.noun}?`;
-    $('#l2').textContent = 'Name'; $('#short').value = ''; $('#capital').value = '';
+    $('#mtext').textContent = fmt(T.askName, {noun: GAMES[g].write.noun});
+    $('#l2').textContent = T.nameLabel; $('#short').value = ''; $('#capital').value = '';
     $('#modal').hidden = false;
     setTimeout(() => $('#capital').focus(), 30);
   }
@@ -348,7 +294,7 @@
       const ok = nameOk($('#capital').value, itemOf(state.cur, key));
       pending = null; pendingWrite = false; $('#modal').hidden = true; hover(null);
       if (ok) succeed(key);
-      else fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + pick([' Der Name stimmt noch nicht – schau dir die Karte nochmal genau an.', ' Das ist nicht der richtige Name. Probier es gleich nochmal!']) + ' Du schaffst das!', key);
+      else fail(fmt(pick(T.formWrongPrefix), {who: who()}) + pick(T.writeWrong) + T.writeWrongEnd, key);
       return;
     }
     const f = GAMES[state.cur].form, a = itemOf(state.cur, key).answers;
@@ -358,7 +304,7 @@
     pending = null; $('#modal').hidden = true;
     if (okShort && okCap) succeed(key, a.capital[0]);
     else {
-            fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + ` Bei ${itemOf(state.cur, key).name} stimmt eine Angabe noch nicht. Die Flagge ist wieder in der Box – beim nächsten Mal klappt's!`, key);
+            fail(fmt(pick(T.formWrongPrefix), {who: who()}) + fmt(T.formWrong, {name: itemOf(state.cur, key).name}), key);
     }
   });
   function succeed(key, capital) {
@@ -366,9 +312,9 @@
     G().done.push(key); G().score += pts; save();
     markDone(g, key); tileEl(key)?.remove(); select(null); updateStats();
     const left = GAMES[g].items.length - G().done.length;
-    const extra = left === 0 ? '' : left === 1 ? ' Nur noch eins!' : G().done.length === Math.ceil(GAMES[g].items.length / 2) ? ' Halbzeit – super Tempo!' : '';
-    toast(pick([`Super, ${who()}!`, `Bravo, ${who()}!`, `Genau richtig, ${who()}!`, `Stark, ${who()}!`, `Top, ${who()}!`, `Das sitzt, ${who()}!`]) +
-      ` ${it.name}${capital ? ' (' + capital + ')' : it.ele ? ' (' + it.ele + ' m)' : ''} geschafft. +${pts} Punkte.` + extra, 'ok');
+    const extra = left === 0 ? '' : left === 1 ? T.lastOne : G().done.length === Math.ceil(GAMES[g].items.length / 2) ? T.halfway : '';
+    const detail = capital ? ` (${capital})` : it.ele ? ` (${it.ele} m)` : '';
+    toast(fmt(pick(T.success), {who: who()}) + fmt(T.successLine, {name: it.name, detail, pts}) + extra, 'ok');
     if (G().done.length === GAMES[g].items.length) win();
   }
   const cancel = () => { if (pending == null) return; const k = pending; pending = null; pendingWrite = false; $('#modal').hidden = true; select(null); hover(null); bounce(k); };
@@ -386,9 +332,9 @@
     clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), Math.min(9000, Math.max(2500, 1500 + msg.length * 60)));
   }
   function win() {
-    $('#wintitle').textContent = `🎉 Bravo, ${who()}!`;
+    $('#wintitle').textContent = fmt(T.winTitle, {who: who()});
     const next = ORDER[(ORDER.indexOf(state.cur) + 1) % ORDER.length];
-    $('#winmsg').textContent = `Du hast «${game().title}» komplett gelöst! Punkte: ${G().score} · Fehler: ${G().errors}. Weiter geht's mit «${GAMES[next].title}» – du bist auf einem super Weg!`;
+    $('#winmsg').textContent = fmt(T.winText, {title: game().title, score: G().score, errors: G().errors, next: GAMES[next].title});
     $('#win').hidden = false;
   }
   $('#win').addEventListener('click', e => { if (e.target.id === 'win') $('#win').hidden = true; });
@@ -397,7 +343,7 @@
     selected = null; $('#win').hidden = true;
     renderBox(); drawMap();
   }
-  $('#reset').addEventListener('click', () => { if (confirm(`${who()}, «${game().title}» wirklich neu beginnen und Punkte zurücksetzen?`)) reset(); });
+  $('#reset').addEventListener('click', () => { if (confirm(fmt(T.confirmReset, {who: who(), title: game().title}))) reset(); });
   $('#again').addEventListener('click', reset);
 
   // controls
@@ -417,9 +363,9 @@
   $('#nameform').addEventListener('submit', ev => {
     ev.preventDefault();
     const first = !state.name;
-    state.name = $('#nameinput').value.trim().slice(0, 24) || 'du'; save();
+    state.name = $('#nameinput').value.trim().slice(0, 24) || T.anonymous; save();
     $('#welcome').hidden = true; renderWho();
-    toast(first ? `Hallo ${state.name}! Los geht's – du schaffst das! 🇨🇭` : `Alles klar, ${state.name}!`, 'ok');
+    toast(fmt(first ? T.welcome : T.renamed, {who: state.name}), 'ok');
   });
   $('#who').addEventListener('click', askPlayer);
 

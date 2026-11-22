@@ -12,7 +12,11 @@ Progress is kept in localStorage (Reset button to start over). Scroll/pinch to z
 **Data:** cantons & lakes – swisstopo via npm `swiss-maps` (2024); rivers – OpenStreetMap (ODbL);
 neighbouring countries – Natural Earth; flags – Wikimedia Commons (`flags/`).
 
-**Adding a game:** add an entry to `GAMES` in `app.js` (items, points, hint, optional form), and tag the matching map
-elements with `data-t="<game>:<key>"` in `drawMap()`.
+**Structure:** `app.js` = logic and rendering only. Content lives in `data/`:
+`quiz.js` (games, countries, lakes, rivers), `cantons.js`, `mountains.js`, `texts.js` (all feedback messages), `geo.js` (map geometry).
 
-**Modes:** lakes, rivers and mountains can be played as *Zuordnen* (match: drag/click a name onto the map object) or *Benennen* (write: click the object, type its name). Accepted spellings: `ALT` in `app.js`.
+**Adding a game:** add an entry to `QUIZ.games` + `QUIZ.order` in `data/quiz.js`, an item builder in `ITEMS` in `app.js`,
+and tag the matching map elements with `data-t="<game>:<key>"` in `drawMap()`.
+Adding items to an existing game (e.g. a mountain) only needs a data edit.
+
+**Modes:** lakes, rivers and mountains can be played as *Zuordnen* (match: drag/click a name onto the map object) or *Benennen* (write: click the object, type its name). Accepted spellings: the `alt` lists in the data files.
