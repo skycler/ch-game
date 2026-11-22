@@ -107,3 +107,10 @@ svg.g-mountains .peaks{display:inline}
 .peakhit{fill:transparent;r:calc(12px / var(--k,1));pointer-events:all}
 .lbl.code.m{display:none}
 svg.g-mountains .lbl.code.m{display:inline}
+
+/* match / write mode switch */
+.modes{display:flex;margin:2px 0 8px;border:2px solid #d52b1e;border-radius:8px;overflow:hidden}
+.modes button{flex:1;background:#fff;color:#d52b1e;border-radius:0;padding:6px}
+.modes button.active{background:#d52b1e;color:#fff;font-weight:700}
+#box.writing{display:block}
+.writehint{color:#567;font-size:14px;margin:6px 2px}

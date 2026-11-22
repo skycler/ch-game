@@ -14,3 +14,5 @@ neighbouring countries – Natural Earth; flags – Wikimedia Commons (`flags/`)
 
 **Adding a game:** add an entry to `GAMES` in `app.js` (items, points, hint, optional form), and tag the matching map
 elements with `data-t="<game>:<key>"` in `drawMap()`.
+
+**Modes:** lakes, rivers and mountains can be played as *Zuordnen* (match: drag/click a name onto the map object) or *Benennen* (write: click the object, type its name). Accepted spellings: `ALT` in `app.js`.

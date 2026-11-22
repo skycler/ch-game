@@ -7,6 +7,17 @@
   //  items:  [{key, name, flag?, answers?}]   (answers => a form is shown after a correct drop)
   //  The map side must tag the matching element with data-t="<game>:<key>" (see drawMap).
   // =====================================================================
+  // accepted alternative spellings for the "write" mode (accents/case/spaces are ignored anyway)
+  const ALT = {
+    'Genfersee': ['Lac Léman', 'Léman', 'Lake Geneva'], 'Bodensee': ['Lake Constance'], 'Lago Maggiore': ['Langensee', 'Lac Majeur'],
+    'Neuenburgersee': ['Lac de Neuchâtel'], 'Luganersee': ['Lago di Lugano', 'Lago Ceresio'],
+    'Vierwaldstättersee': ['Vierwaldstaettersee', 'Lac des Quatre-Cantons'], 'Bielersee': ['Lac de Bienne'], 'Murtensee': ['Lac de Morat'],
+    'Rhein': ['Rhin', 'Reno'], 'Rhône': ['Rhone'], 'Saane': ['Sarine', 'La Sarine'], 'Ticino': ['Tessin'], 'Inn': ['En'],
+    'Matterhorn': ['Cervin', 'Cervino'], 'Dufourspitze': ['Monte Rosa', 'Punta Dufour'], 'Piz Bernina': ['Bernina'],
+    'Brienzer Rothorn': ['Rothorn', 'Brienzer Rothorn'], 'Monte Tamaro': ['Tamaro']
+  };
+  const withAlt = it => ({...it, alt: ALT[it.key] || []});
+
   const cantonItems = Object.entries(CANTONS).map(([id, c]) => ({
     key: c.code, name: c.name, id: +id, flag: `flags/${c.code}.svg`,
     answers: {short: [c.code], capital: [c.capital, ...c.alt]}
@@ -19,17 +30,18 @@
     {key: 'LI', geo: 'Liechtenstein', name: 'Liechtenstein', capital: ['Vaduz'], short: ['FL', 'LI']}
   ].map(c => ({key: c.key, geo: c.geo, name: c.name, flag: `flags/countries/${c.key}.svg`, answers: {short: c.short, capital: c.capital}}));
   // lake ids = swisstopo/BFS lake numbers
-  const lakeItems = [
+  const lakeItems0 = [
     ['Genfersee', 9757], ['Bodensee', 9326], ['Lago Maggiore', 9711], ['Neuenburgersee', 9151], ['Luganersee', 9710],
     ['Vierwaldstättersee', 9179], ['Zürichsee', 9050], ['Thunersee', 9073], ['Brienzersee', 9089], ['Bielersee', 9148],
     ['Zugersee', 9175], ['Walensee', 9267], ['Murtensee', 9294], ['Sempachersee', 9163], ['Hallwilersee', 9172]
   ].map(([name, id]) => ({key: name, name, id}));
+  const lakeItems = lakeItems0.map(withAlt);
   // river keys = names used in data/geo.js
   const riverItems = [
     ['Rhein'], ['Rhône', 'Rhone'], ['Aare'], ['Reuss'], ['Limmat'], ['Inn'], ['Ticino'], ['Doubs'], ['Thur'], ['Saane'], ['Emme'], ['Maggia'], ['Hinterrhein'], ['Vorderrhein']
-  ].map(([data, shown]) => ({key: data, name: shown || data}));
+  ].map(([data, shown]) => withAlt({key: data, name: shown || data}));
 
-  const mountainItems = MOUNTAINS.map(m => ({key: m.name, name: m.name, lon: m.lon, lat: m.lat, ele: m.ele}));
+  const mountainItems = MOUNTAINS.map(m => withAlt({key: m.name, name: m.name, lon: m.lon, lat: m.lat, ele: m.ele}));
 
   const GAMES = {
     cantons: {
@@ -45,17 +57,17 @@
       wrongMsg: () => 'Das ist nicht das richtige Land für diese Flagge.'
     },
     lakes: {
-      title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true,
+      title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true, write: {noun: 'See', click: 'einen See'},
       hint: 'Seename auf den See ziehen – oder Namen anklicken und dann den See anklicken. Zoomen hilft bei kleinen Seen.',
       wrongMsg: it => `Das ist nicht der ${it.name}.`
     },
     mountains: {
-      title: 'Berge', box: 'Berge', points: 2, items: mountainItems, text: true,
+      title: 'Berge', box: 'Berge', points: 2, items: mountainItems, text: true, write: {noun: 'Berg', click: 'ein Dreieck ▲'},
       hint: 'Bergname auf das Dreieck ▲ ziehen – oder Namen anklicken und dann den Berg anklicken.',
       wrongMsg: it => `Das ist nicht der richtige Berg für «${it.name}».`
     },
     rivers: {
-      title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true,
+      title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true, write: {noun: 'Fluss', click: 'einen Fluss'},
       hint: 'Flussname auf den Fluss ziehen – oder Namen anklicken und dann den Fluss anklicken.',
       wrongMsg: it => `Das ist nicht der Fluss «${it.name}».`
     }
@@ -75,6 +87,7 @@
       s = {cur: 'cantons', g: {}};
       try { const o = JSON.parse(localStorage.getItem(OLD_KEY)); if (o && Array.isArray(o.done)) s.g.cantons = o; } catch (e) {}
     }
+    s.mode = s.mode || {};
     for (const g of ORDER) if (!s.g[g]) s.g[g] = fresh(g);
     // keep saved state in sync with the current item lists (items may have been added/removed)
     for (const g of ORDER) {
@@ -89,10 +102,12 @@
   const who = () => state.name || 'du';
   const pick = arr => arr[Math.random() * arr.length | 0];
   const G = () => state.g[state.cur];
+  const isWrite = () => !!GAMES[state.cur].write && state.mode[state.cur] === 'write';
   const game = () => GAMES[state.cur];
 
   let selected = null;   // item key selected in the box
   let pending = null;    // item key waiting for the form
+  let pendingWrite = false;
 
   // ---------- geo ----------
   const cantons = topojson.feature(GEO.topo, GEO.topo.objects.cantons).features;
@@ -205,22 +220,32 @@
     const pre = state.cur + ':';
     return t && t.dataset.t.startsWith(pre) ? t.dataset.t.slice(pre.length) : null;
   }
-  svg.on('click', ev => { if (!selected) return; const k = targetAt(ev.clientX, ev.clientY); if (k != null) guess(selected, k); });
-  svg.on('pointermove', ev => { if (!drag) hover(selected ? targetAt(ev.clientX, ev.clientY) : null); });
-  svg.on('pointerleave', () => { if (!drag) hover(null); });
+  svg.on('click', ev => {
+    const k = targetAt(ev.clientX, ev.clientY);
+    if (k == null) return;
+    if (isWrite()) { askToName(k); return; }
+    if (selected) guess(selected, k);
+  });
+  svg.on('pointermove', ev => { if (!drag && pending == null) hover(selected || isWrite() ? targetAt(ev.clientX, ev.clientY) : null); });
+  svg.on('pointerleave', () => { if (!drag && pending == null) hover(null); });
 
   // ---------- box ----------
   const tileHTML = it => game().text ? it.name : `<img src="${it.flag}" alt="Flagge" draggable="false">`;
   function renderBox() {
     const box = $('#box'); box.innerHTML = ''; box.classList.toggle('text', !!game().text);
-    for (const key of G().order) {
+    const writing = isWrite();
+    box.classList.toggle('writing', writing);
+    if (writing) box.innerHTML = `<p class="writehint">Klicke auf ${game().write.click} auf der Karte und schreibe den Namen.<br>Zoomen hilft bei kleinen Objekten.</p>`;
+    for (const key of writing ? [] : G().order) {
       if (G().done.includes(key)) continue;
       const d = document.createElement('div');
       d.className = 'flag'; d.dataset.key = key; d.innerHTML = tileHTML(itemOf(state.cur, key));
       box.appendChild(d);
     }
     $('#boxtitle').textContent = game().box;
-    $('#hint').textContent = game().hint;
+    $('#hint').textContent = writing ? `Klicke auf ${game().write.click} und schreibe den Namen.` : game().hint;
+    const modes = $('#modes'); modes.hidden = !game().write;
+    modes.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.dataset.m === 'write') === writing));
     updateStats();
   }
   const tileEl = key => document.querySelector(`.flag[data-key="${CSS.escape(key)}"]`);
@@ -237,6 +262,10 @@
     const b = e.target.closest('button'); if (!b || b.dataset.g === state.cur) return;
     state.cur = b.dataset.g; save(); select(null); hover(null); lastHover = null; setGameClass(); renderBox();
     if (G().done.length === game().items.length) win();
+  });
+  $('#modes').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.mode[state.cur] = b.dataset.m; save(); select(null); hover(null); lastHover = null; renderBox();
   });
   function select(key) {
     selected = key;
@@ -282,7 +311,8 @@
     if (G().done.includes(targetKey)) { toast(`${who()}, ${hit.name} hast du schon gelöst – such dir den nächsten!`, 'err'); select(null); return; }
     if (targetKey !== key) { fail(pick([`Nicht ganz, ${who()}!`, `Fast, ${who()}!`, `Gute Idee, ${who()}, aber nicht ganz.`]) + ' ' + GAMES[g].wrongMsg(it) + pick([' Probier es nochmal!', ' Du schaffst das!', ' Bleib dran!']), key); return; }
     if (!it.answers) { succeed(key); return; }
-    pending = key;
+    pending = key; pendingWrite = false;
+    modalLayout(false);
     const f = GAMES[g].form;
     $('#mflag').src = it.flag; $('#mname').textContent = it.name; $('#mtext').textContent = f.text;
     $('#l1').textContent = f.short; $('#l2').textContent = f.capital;
@@ -291,10 +321,37 @@
     setTimeout(() => $('#short').focus(), 30);
   }
 
+  function modalLayout(write) {
+    $('#short').closest('label').hidden = write; $('#short').required = !write;
+    $('#mflag').hidden = write; $('#mname').hidden = write;
+  }
+  function askToName(k) {
+    const g = state.cur, it = itemOf(g, k);
+    if (G().done.includes(k)) { toast(`${who()}, ${it.name} hast du schon gelöst – such dir einen anderen!`, 'err'); return; }
+    pending = k; pendingWrite = true; hover(k);
+    modalLayout(true);
+    $('#mtext').textContent = `Wie heisst dieser ${GAMES[g].write.noun}?`;
+    $('#l2').textContent = 'Name'; $('#short').value = ''; $('#capital').value = '';
+    $('#modal').hidden = false;
+    setTimeout(() => $('#capital').focus(), 30);
+  }
+  const lev = (a, b) => { const d = Array.from({length: a.length + 1}, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)); return d[a.length][b.length]; };
+  // exact match (ignoring case, accents, spaces, punctuation); one typo tolerated for longer names
+  const nameOk = (input, it) => { const x = norm(input).replace(/ /g, ''); if (!x) return false;
+    return [it.name, ...(it.alt || [])].some(n => { const y = norm(n).replace(/ /g, ''); return x === y || (y.length >= 6 && lev(x, y) <= 1); }); };
   const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   $('#form').addEventListener('submit', ev => {
     ev.preventDefault();
-    const key = pending, f = GAMES[state.cur].form, a = itemOf(state.cur, key).answers;
+    const key = pending;
+    if (pendingWrite) {
+      const ok = nameOk($('#capital').value, itemOf(state.cur, key));
+      pending = null; pendingWrite = false; $('#modal').hidden = true; hover(null);
+      if (ok) succeed(key);
+      else fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + pick([' Der Name stimmt noch nicht – schau dir die Karte nochmal genau an.', ' Das ist nicht der richtige Name. Probier es gleich nochmal!']) + ' Du schaffst das!', key);
+      return;
+    }
+    const f = GAMES[state.cur].form, a = itemOf(state.cur, key).answers;
     const okShort = a.short.some(s => s.toUpperCase() === $('#short').value.trim().toUpperCase());
     const cap = norm($('#capital').value);
     const okCap = a.capital.some(c => norm(c) === cap);
@@ -305,7 +362,7 @@
     }
   });
   function succeed(key, capital) {
-    const g = state.cur, it = itemOf(g, key), pts = GAMES[g].points;
+    const g = state.cur, it = itemOf(g, key), pts = GAMES[g].points + (isWrite() ? 1 : 0);
     G().done.push(key); G().score += pts; save();
     markDone(g, key); tileEl(key)?.remove(); select(null); updateStats();
     const left = GAMES[g].items.length - G().done.length;
@@ -314,7 +371,7 @@
       ` ${it.name}${capital ? ' (' + capital + ')' : it.ele ? ' (' + it.ele + ' m)' : ''} geschafft. +${pts} Punkte.` + extra, 'ok');
     if (G().done.length === GAMES[g].items.length) win();
   }
-  const cancel = () => { if (pending == null) return; const k = pending; pending = null; $('#modal').hidden = true; select(null); bounce(k); };
+  const cancel = () => { if (pending == null) return; const k = pending; pending = null; pendingWrite = false; $('#modal').hidden = true; select(null); hover(null); bounce(k); };
   $('#cancel').addEventListener('click', cancel);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { cancel(); select(null); } });
 
@@ -352,7 +409,7 @@
 
   // ---------- player name ----------
   function renderWho() { $('#who').textContent = '👤 ' + (state.name || ''); }
-  function askName() {
+  function askPlayer() {
     $('#nameinput').value = state.name || '';
     $('#welcome').hidden = false;
     setTimeout(() => { $('#nameinput').focus(); $('#nameinput').select(); }, 30);
@@ -364,9 +421,9 @@
     $('#welcome').hidden = true; renderWho();
     toast(first ? `Hallo ${state.name}! Los geht's – du schaffst das! 🇨🇭` : `Alles klar, ${state.name}!`, 'ok');
   });
-  $('#who').addEventListener('click', askName);
+  $('#who').addEventListener('click', askPlayer);
 
   renderBox(); drawMap(); renderWho();
-  if (!state.name) askName();
+  if (!state.name) askPlayer();
   else if (G().done.length === game().items.length) win();
 })();
