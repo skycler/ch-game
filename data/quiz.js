@@ -64,7 +64,8 @@ window.QUIZ = {
     {name: 'Walensee',           id: 9267},
     {name: 'Murtensee',          id: 9294, alt: ['Lac de Morat']},
     {name: 'Sempachersee',       id: 9163},
-    {name: 'Hallwilersee',       id: 9172}
+    {name: 'Hallwilersee',       id: 9172},
+    {name: 'Sihlsee',            id: 9216}
   ],
 
   // key = river name in data/geo.js, name = displayed name (defaults to key),
@@ -83,7 +84,8 @@ window.QUIZ = {
     {key: 'Emme',        anchor: [7.75, 47.0]},
     {key: 'Maggia',      anchor: [8.65, 46.3]},
     {key: 'Hinterrhein', anchor: [9.35, 46.62]},
-    {key: 'Vorderrhein', anchor: [8.95, 46.73]}
+    {key: 'Vorderrhein', anchor: [8.95, 46.73]},
+    {key: 'Linth',       anchor: [9.07, 47.0]}
   ],
   hiddenRivers: ['Lütschine', 'Töss', 'Glatt', 'Simme', 'Sihl', 'Kander']   // in data/geo.js but not drawn
 };
