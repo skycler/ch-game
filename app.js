@@ -34,23 +34,23 @@
       title: 'Kantone', box: 'Flaggen', points: 4, items: cantonItems,
       hint: 'Flagge auf einen Kanton ziehen – oder Flagge anklicken und dann den Kanton anklicken.',
       form: {text: 'Richtiger Kanton! Jetzt die Angaben ausfüllen:', short: 'Kürzel (2 Buchstaben)', capital: 'Hauptort'},
-      wrongMsg: (it, hit) => `Diese Flagge gehört nicht zu ${hit.name}.`
+      wrongMsg: () => 'Das ist nicht der richtige Kanton für diese Flagge.'
     },
     countries: {
       title: 'Nachbarländer', box: 'Flaggen', points: 4, items: countryItems,
       hint: 'Flagge auf ein Nachbarland ziehen – oder Flagge anklicken und dann das Land anklicken.',
       form: {text: 'Richtiges Land! Jetzt die Angaben ausfüllen:', short: 'Länderkürzel (z. B. Autokennzeichen)', capital: 'Hauptstadt'},
-      wrongMsg: (it, hit) => `Diese Flagge gehört nicht zu ${hit.name}.`
+      wrongMsg: () => 'Das ist nicht das richtige Land für diese Flagge.'
     },
     lakes: {
       title: 'Seen', box: 'Seen', points: 2, items: lakeItems, text: true,
       hint: 'Seename auf den See ziehen – oder Namen anklicken und dann den See anklicken. Zoomen hilft bei kleinen Seen.',
-      wrongMsg: (it, hit) => `Das ist nicht der ${it.name} – hier ist: ${hit.name}.`
+      wrongMsg: it => `Das ist nicht der ${it.name}.`
     },
     rivers: {
       title: 'Flüsse', box: 'Flüsse', points: 2, items: riverItems, text: true,
       hint: 'Flussname auf den Fluss ziehen – oder Namen anklicken und dann den Fluss anklicken.',
-      wrongMsg: (it, hit) => `Das ist nicht die/der ${it.name} – hier ist: ${hit.name}.`
+      wrongMsg: it => `Das ist nicht der Fluss «${it.name}».`
     }
   };
   const ORDER = Object.keys(GAMES);
@@ -265,7 +265,7 @@
   function guess(key, targetKey) {
     const g = state.cur, it = itemOf(g, key), hit = itemOf(g, targetKey);
     if (G().done.includes(targetKey)) { toast(`${who()}, ${hit.name} hast du schon gelöst – such dir den nächsten!`, 'err'); select(null); return; }
-    if (targetKey !== key) { fail(pick([`Nicht ganz, ${who()}!`, `Fast, ${who()}!`, `Gute Idee, ${who()}, aber nicht ganz.`]) + ' ' + GAMES[g].wrongMsg(it, hit) + pick([' Probier es nochmal!', ' Du schaffst das!', ' Bleib dran!']), key); return; }
+    if (targetKey !== key) { fail(pick([`Nicht ganz, ${who()}!`, `Fast, ${who()}!`, `Gute Idee, ${who()}, aber nicht ganz.`]) + ' ' + GAMES[g].wrongMsg(it) + pick([' Probier es nochmal!', ' Du schaffst das!', ' Bleib dran!']), key); return; }
     if (!it.answers) { succeed(key); return; }
     pending = key;
     const f = GAMES[g].form;
@@ -286,8 +286,7 @@
     pending = null; $('#modal').hidden = true;
     if (okShort && okCap) succeed(key, a.capital[0]);
     else {
-      const bad = [!okShort && 'Kürzel', !okCap && f.capital].filter(Boolean).join(' und ');
-      fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + ` ${bad} bei ${itemOf(state.cur, key).name} stimmt noch nicht. Die Flagge ist wieder in der Box – beim nächsten Mal klappt's!`, key);
+            fail(pick([`Fast, ${who()}!`, `Nicht ganz, ${who()}.`, `Knapp daneben, ${who()}!`]) + ` Bei ${itemOf(state.cur, key).name} stimmt eine Angabe noch nicht. Die Flagge ist wieder in der Box – beim nächsten Mal klappt's!`, key);
     }
   });
   function succeed(key, capital) {
@@ -312,7 +311,7 @@
   }
   let tt; function toast(msg, cls) {
     const t = $('#toast'); t.textContent = msg; t.className = 'show ' + cls;
-    clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2800);
+    clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), Math.min(9000, Math.max(2500, 1500 + msg.length * 60)));
   }
   function win() {
     $('#wintitle').textContent = `🎉 Bravo, ${who()}!`;
